@@ -16,12 +16,26 @@
 #include "eigrp_packet.h"
 #include "eigrp_const.h"
 
+unsigned short calcChecksum(void *paStruct, int paStructLen)
+{
+	int i;
+	unsigned short checksum = 0;
+	unsigned short *smernik;
 
+	smernik = (unsigned short *)paStruct;
+	for(i=0; i<paStructLen/2; i++)
+	{
+		checksum += *(smernik+i);
+	}
+
+	return checksum;
+}
 
 int main(void)
 {
 	int Socket;
 	struct sockaddr_in SockAddr;
+	struct ip_mreqn MultiJoin;
 
 	if((Socket = socket(AF_INET, SOCK_RAW, PROTO_EIGRP)) == -1)
 	{
@@ -39,13 +53,39 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
+	if(bind(Socket, (struct sockaddr *) &SockAddr, sizeof(SockAddr)) == -1)
+	{
+		perror("bind");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	//clenstvo v multicast skupine
+	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
+	{
+		fprintf(stderr, "inet_aton: Invalid multicast address\n");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+	MultiJoin.imr_address.s_addr = INADDR_ANY;
+	MultiJoin.imr_ifindex = 0;
+
+	if(setsockopt(Socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &MultiJoin, sizeof(MultiJoin)) == -1)
+	{
+		perror("setsockopt");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+
+	/* Inicializacia EIGRP struktur */
 
 	struct EIGRP_Header_t Header;
 	memset(&Header, 0, sizeof(Header));
 	Header.Version = EIGRP_VERSION;
-	Header.Opcode = EIGRP_OPC_HELLO;  //Hello packet
+	Header.Opcode = EIGRP_OPC_HELLO;
 	Header.Flags = htonl(0x0000);
-	Header.ASN = htons(100);
+	Header.ASN = htons(1);
 
 	struct EIGRP_TLV_Param_t TLV_Param;
 	memset(&TLV_Param, 0, sizeof(TLV_Param));
@@ -64,25 +104,9 @@ int main(void)
 
 	//vypocet Checksumu
 	unsigned short checksum = 0;
-	unsigned short *smernik;
-	int i;
-
-	smernik = (unsigned short *)&Header;
-	for(i=0; i<sizeof(Header)/2; i++)
-	{
-		checksum += *(smernik+i);
-	}
-	smernik = (unsigned short *)&TLV_Param;
-	for(i=0; i<sizeof(TLV_Param)/2; i++)
-	{
-		checksum += *(smernik+i);
-	}
-	smernik = (unsigned short *)&TLV_Version;
-	for(i=0; i<sizeof(TLV_Version)/2; i++)
-	{
-		checksum += *(smernik+i);
-	}
-
+	checksum += calcChecksum(&Header, sizeof(Header));
+	checksum += calcChecksum(&TLV_Param, sizeof(TLV_Param));
+	checksum += calcChecksum(&TLV_Version, sizeof(TLV_Version));
 	Header.Checksum = ~checksum;
 
 
@@ -102,12 +126,36 @@ int main(void)
 	MsgHead.msg_iovlen = 3;
 
 
-	if(sendmsg(Socket, &MsgHead, 0) == -1)
+	char RecvPacket[1000];
+	ssize_t Bytes;
+	socklen_t AddrLen = sizeof(SockAddr);
+	for(;;)
 	{
-		perror("sendmsg");
-		close(Socket);
-		exit(EXIT_ERROR);
+		if(sendmsg(Socket, &MsgHead, 0) == -1)
+		{
+			perror("sendmsg");
+			close(Socket);
+			exit(EXIT_ERROR);
+		}
+
+		memset(&RecvPacket, 0, 1000);
+		if((Bytes = recvfrom(Socket, &RecvPacket, 1000, 0, (struct sockaddr *)&SockAddr, &AddrLen)) == -1)
+		{
+			perror("recvfrom");
+			break;
+		}
+
+		struct EIGRP_Header_t *RecvHdr = (struct EIGRP_Header_t *)&RecvPacket;
+		printf("Packet from %s (%ld):\n\tOpcode: %d\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\n",
+				inet_ntoa(SockAddr.sin_addr),
+				Bytes,
+				RecvHdr->Opcode,
+				ntohl(RecvHdr->Flags),
+				ntohl(RecvHdr->SeqNum),
+				ntohl(RecvHdr->AckNum));
+
 	}
 
+	close(Socket);
 	return 0;
 }
