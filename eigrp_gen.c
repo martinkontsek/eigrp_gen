@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <arpa/inet.h>
 
 #include "eigrp_packet.h"
@@ -34,7 +35,7 @@ unsigned short calcChecksum(void *paStruct, int paStructLen)
 int main(void)
 {
 	int Socket;
-	struct sockaddr_in SockAddr;
+	struct sockaddr_in SendAddr, RecvAddr;
 	struct ip_mreqn MultiJoin;
 
 	if((Socket = socket(AF_INET, SOCK_RAW, PROTO_EIGRP)) == -1)
@@ -43,17 +44,17 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	memset(&SockAddr, 0, sizeof(SockAddr));
-	SockAddr.sin_family = AF_INET;
+	memset(&SendAddr, 0, sizeof(SendAddr));
+	SendAddr.sin_family = AF_INET;
 
-	if(inet_aton(EIGRP_MCAST, &SockAddr.sin_addr) == 0)
+	if(inet_aton(EIGRP_MCAST, &SendAddr.sin_addr) == 0)
 	{
 		fprintf(stderr, "inet_aton: Invalid destination Address\n");
 		close(Socket);
 		exit(EXIT_ERROR);
 	}
 
-	if(bind(Socket, (struct sockaddr *) &SockAddr, sizeof(SockAddr)) == -1)
+	if(bind(Socket, (struct sockaddr *) &SendAddr, sizeof(SendAddr)) == -1)
 	{
 		perror("bind");
 		close(Socket);
@@ -120,42 +121,54 @@ int main(void)
 
 	struct msghdr MsgHead;
 	memset(&MsgHead, 0, sizeof(MsgHead));
-	MsgHead.msg_name = &SockAddr;
-	MsgHead.msg_namelen = sizeof(SockAddr);
+	MsgHead.msg_name = &SendAddr;
+	MsgHead.msg_namelen = sizeof(SendAddr);
 	MsgHead.msg_iov = (void *)bufs;
 	MsgHead.msg_iovlen = 3;
 
 
-	char RecvPacket[1000];
+	if(sendmsg(Socket, &MsgHead, 0) == -1)
+	{
+		perror("sendmsg");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	char RecvPacket[10000];
 	ssize_t Bytes;
-	socklen_t AddrLen = sizeof(SockAddr);
+	socklen_t AddrLen = sizeof(RecvAddr);
+	struct iphdr *IP_Header;
+	struct EIGRP_Header_t *RecvHdr;
 	for(;;)
 	{
-		if(sendmsg(Socket, &MsgHead, 0) == -1)
-		{
-			perror("sendmsg");
-			close(Socket);
-			exit(EXIT_ERROR);
-		}
 
-		memset(&RecvPacket, 0, 1000);
-		if((Bytes = recvfrom(Socket, &RecvPacket, 1000, 0, (struct sockaddr *)&SockAddr, &AddrLen)) == -1)
+
+		memset(&RecvPacket, 0, 10000);
+		memset(&RecvAddr, 0, AddrLen);
+		if((Bytes = recvfrom(Socket, RecvPacket, 10000, 0, (struct sockaddr *)&RecvAddr, &AddrLen)) == -1)
 		{
 			perror("recvfrom");
 			break;
 		}
 
-		struct EIGRP_Header_t *RecvHdr = (struct EIGRP_Header_t *)&RecvPacket;
-		printf("Packet from %s (%ld):\n\tOpcode: %d\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\n",
-				inet_ntoa(SockAddr.sin_addr),
+		IP_Header = (struct iphdr *)RecvPacket;
+		RecvHdr = (struct EIGRP_Header_t *)(RecvPacket+20);
+		printf("Packet from %s (%ld) Proto %d :\n\tOpcode: %d\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\tAs: %d\n\n",
+				inet_ntoa(SendAddr.sin_addr),
 				Bytes,
+				IP_Header->protocol,
 				RecvHdr->Opcode,
 				ntohl(RecvHdr->Flags),
 				ntohl(RecvHdr->SeqNum),
-				ntohl(RecvHdr->AckNum));
+				ntohl(RecvHdr->AckNum),
+				ntohs(RecvHdr->ASN));
 
 	}
 
+	/*
+	 * TODO: sockopt(SOL_SOCKET, SO_BINDTODEVICE) - nabindovanie socketu na presny interface
+	 * TODO: mreqn  - nastavit interface index
+	 */
 	close(Socket);
 	return 0;
 }
