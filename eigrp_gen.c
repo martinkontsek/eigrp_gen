@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <net/if.h>
 
 #include "eigrp_packet.h"
 #include "eigrp_const.h"
@@ -37,12 +38,28 @@ int main(void)
 	int Socket;
 	struct sockaddr_in SendAddr, RecvAddr;
 	struct ip_mreqn MultiJoin;
+	unsigned int IFindex;
 
 	if((Socket = socket(AF_INET, SOCK_RAW, PROTO_EIGRP)) == -1)
 	{
 		perror("socket");
 		exit(EXIT_ERROR);
 	}
+
+	if((IFindex = if_nametoindex(IF_NAME)) == 0)
+	{
+		perror("if_nametoindex");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
+	{
+		perror("setsockopt_sol");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
 
 	memset(&SendAddr, 0, sizeof(SendAddr));
 	SendAddr.sin_family = AF_INET;
@@ -54,12 +71,6 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	if(bind(Socket, (struct sockaddr *) &SendAddr, sizeof(SendAddr)) == -1)
-	{
-		perror("bind");
-		close(Socket);
-		exit(EXIT_ERROR);
-	}
 
 	//clenstvo v multicast skupine
 	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
@@ -69,11 +80,11 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 	MultiJoin.imr_address.s_addr = INADDR_ANY;
-	MultiJoin.imr_ifindex = 0;
+	MultiJoin.imr_ifindex = IFindex;
 
 	if(setsockopt(Socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &MultiJoin, sizeof(MultiJoin)) == -1)
 	{
-		perror("setsockopt");
+		perror("setsockopt_multicast");
 		close(Socket);
 		exit(EXIT_ERROR);
 	}
@@ -153,11 +164,22 @@ int main(void)
 
 		IP_Header = (struct iphdr *)RecvPacket;
 		RecvHdr = (struct EIGRP_Header_t *)(RecvPacket+20);
-		printf("Packet from %s (%ld) Proto %d :\n\tOpcode: %d\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\tAs: %d\n\n",
-				inet_ntoa(SendAddr.sin_addr),
+		int opc = RecvHdr->Opcode;
+		struct in_addr src, dst;
+		src.s_addr = IP_Header->saddr;
+		dst.s_addr = IP_Header->daddr;
+		char src_s[15];
+		strcpy(&src_s, inet_ntoa(src));
+		char dst_s[15];
+		strcpy(&dst_s, inet_ntoa(dst));
+
+		printf("Packet from %s to %s (%ld) Proto %d :\n\tOpcode: %s (%d)\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\tAs: %d\n\n",
+				src_s,
+				dst_s,
 				Bytes,
 				IP_Header->protocol,
-				RecvHdr->Opcode,
+				(opc==5)?"Hello":((opc==1)?"Update":opc),
+				opc,
 				ntohl(RecvHdr->Flags),
 				ntohl(RecvHdr->SeqNum),
 				ntohl(RecvHdr->AckNum),
@@ -165,10 +187,6 @@ int main(void)
 
 	}
 
-	/*
-	 * TODO: sockopt(SOL_SOCKET, SO_BINDTODEVICE) - nabindovanie socketu na presny interface
-	 * TODO: mreqn  - nastavit interface index
-	 */
 	close(Socket);
 	return 0;
 }

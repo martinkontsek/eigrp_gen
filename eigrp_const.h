@@ -8,6 +8,7 @@
 #ifndef EIGRP_CONST_H_
 #define EIGRP_CONST_H_
 
+#define IF_NAME 				"veth0"
 
 /* EIGRP Standard constants */
 #define PROTO_EIGRP 			88
