@@ -15,6 +15,9 @@
 #define EIGRP_VERSION			2
 #define EIGRP_MCAST				"224.0.0.10"
 
+/* EIGRP Timers*/
+#define HELLO_INTERVAL			5
+
 /* EIGRP Packet Opcodes */
 #define EIGRP_OPC_UPDATE 		1
 #define EIGRP_OPC_HELLO 		5

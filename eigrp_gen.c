@@ -14,6 +14,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <pthread.h>
 
 #include "eigrp_packet.h"
 #include "eigrp_const.h"
@@ -33,33 +34,9 @@ unsigned short calcChecksum(void *paStruct, int paStructLen)
 	return checksum;
 }
 
-int main(void)
+void sendPacket(int Socket)
 {
-	int Socket;
-	struct sockaddr_in SendAddr, RecvAddr;
-	struct ip_mreqn MultiJoin;
-	unsigned int IFindex;
-
-	if((Socket = socket(AF_INET, SOCK_RAW, PROTO_EIGRP)) == -1)
-	{
-		perror("socket");
-		exit(EXIT_ERROR);
-	}
-
-	if((IFindex = if_nametoindex(IF_NAME)) == 0)
-	{
-		perror("if_nametoindex");
-		close(Socket);
-		exit(EXIT_ERROR);
-	}
-
-	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
-	{
-		perror("setsockopt_sol");
-		close(Socket);
-		exit(EXIT_ERROR);
-	}
-
+	struct sockaddr_in SendAddr;
 
 	memset(&SendAddr, 0, sizeof(SendAddr));
 	SendAddr.sin_family = AF_INET;
@@ -70,25 +47,6 @@ int main(void)
 		close(Socket);
 		exit(EXIT_ERROR);
 	}
-
-
-	//clenstvo v multicast skupine
-	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
-	{
-		fprintf(stderr, "inet_aton: Invalid multicast address\n");
-		close(Socket);
-		exit(EXIT_ERROR);
-	}
-	MultiJoin.imr_address.s_addr = INADDR_ANY;
-	MultiJoin.imr_ifindex = IFindex;
-
-	if(setsockopt(Socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &MultiJoin, sizeof(MultiJoin)) == -1)
-	{
-		perror("setsockopt_multicast");
-		close(Socket);
-		exit(EXIT_ERROR);
-	}
-
 
 	/* Inicializacia EIGRP struktur */
 
@@ -144,22 +102,23 @@ int main(void)
 		close(Socket);
 		exit(EXIT_ERROR);
 	}
+}
 
+void receivePacket(int Socket)
+{
 	char RecvPacket[10000];
-	ssize_t Bytes;
-	socklen_t AddrLen = sizeof(RecvAddr);
-	struct iphdr *IP_Header;
-	struct EIGRP_Header_t *RecvHdr;
-	for(;;)
-	{
-
+		ssize_t Bytes;
+		struct sockaddr_in RecvAddr;
+		socklen_t AddrLen = sizeof(RecvAddr);
+		struct iphdr *IP_Header;
+		struct EIGRP_Header_t *RecvHdr;
 
 		memset(&RecvPacket, 0, 10000);
 		memset(&RecvAddr, 0, AddrLen);
 		if((Bytes = recvfrom(Socket, RecvPacket, 10000, 0, (struct sockaddr *)&RecvAddr, &AddrLen)) == -1)
 		{
 			perror("recvfrom");
-			break;
+			return;
 		}
 
 		IP_Header = (struct iphdr *)RecvPacket;
@@ -184,7 +143,72 @@ int main(void)
 				ntohl(RecvHdr->SeqNum),
 				ntohl(RecvHdr->AckNum),
 				ntohs(RecvHdr->ASN));
+}
 
+void helloThread(void *arg)
+{
+	int Socket = arg;
+	for(;;)
+	{
+		sendPacket(Socket);
+		sleep(5);
+	}
+}
+
+int main(void)
+{
+	int Socket;
+	struct ip_mreqn MultiJoin;
+	unsigned int IFindex;
+
+	if((Socket = socket(AF_INET, SOCK_RAW, PROTO_EIGRP)) == -1)
+	{
+		perror("socket");
+		exit(EXIT_ERROR);
+	}
+
+	if((IFindex = if_nametoindex(IF_NAME)) == 0)
+	{
+		perror("if_nametoindex");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
+	{
+		perror("setsockopt_sol");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+
+	//clenstvo v multicast skupine
+	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
+	{
+		fprintf(stderr, "inet_aton: Invalid multicast address\n");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+	MultiJoin.imr_address.s_addr = INADDR_ANY;
+	MultiJoin.imr_ifindex = IFindex;
+
+	if(setsockopt(Socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &MultiJoin, sizeof(MultiJoin)) == -1)
+	{
+		perror("setsockopt_multicast");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	pthread_t SendHelloThread;
+	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
+
+
+	//sendPacket(Socket);
+
+
+	for(;;)
+	{
+		receivePacket(Socket);
 	}
 
 	close(Socket);
