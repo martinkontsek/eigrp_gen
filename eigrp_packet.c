@@ -7,6 +7,10 @@
 
 #include "eigrp_packet.h"
 
+int Seq = 100;
+int jeSusedstvo = 0;
+struct in_addr NeiAddr;
+
 unsigned short calcChecksum(void *paStruct, int paStructLen)
 {
 	int i;
@@ -119,20 +123,49 @@ void receivePacket(int Socket)
 		struct in_addr src, dst;
 		src.s_addr = IP_Header->saddr;
 		dst.s_addr = IP_Header->daddr;
-		char src_s[15];
-		strcpy(&src_s, inet_ntoa(src));
-		char dst_s[15];
-		strcpy(&dst_s, inet_ntoa(dst));
+//		char src_s[15];
+//		strcpy(&src_s, inet_ntoa(src));
+//		char dst_s[15];
+//		strcpy(&dst_s, inet_ntoa(dst));
+//
+//		printf("Packet from %s to %s (%ld) Proto %d :\n\tOpcode: %s (%d)\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\tAs: %d\n\n",
+//				src_s,
+//				dst_s,
+//				Bytes,
+//				IP_Header->protocol,
+//				(opc==5)?"Hello":((opc==1)?"Update":opc),
+//				opc,
+//				ntohl(RecvHdr->Flags),
+//				ntohl(RecvHdr->SeqNum),
+//				ntohl(RecvHdr->AckNum),
+//				ntohs(RecvHdr->ASN));
 
-		printf("Packet from %s to %s (%ld) Proto %d :\n\tOpcode: %s (%d)\n\tFlags: %x\n\tSeq: %d\n\tAck: %d\n\tAs: %d\n\n",
-				src_s,
-				dst_s,
-				Bytes,
-				IP_Header->protocol,
-				(opc==5)?"Hello":((opc==1)?"Update":opc),
-				opc,
-				ntohl(RecvHdr->Flags),
-				ntohl(RecvHdr->SeqNum),
-				ntohl(RecvHdr->AckNum),
-				ntohs(RecvHdr->ASN));
+		if((opc==1) && (ntohl(RecvHdr->Flags) == 1))
+		{
+			sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum));
+			NeiAddr = src;
+			Seq++;
+			return;
+		}
+
+		if((opc==1) && (ntohl(RecvHdr->Flags) == 8))
+		{
+			sendPacket(Socket, src, EIGRP_OPC_UPDATE, 8, Seq, ntohl(RecvHdr->SeqNum));
+			jeSusedstvo = 1;
+			Seq++;
+			return;
+		}
+
+
+		if(jeSusedstvo == 1)
+		{
+			printf("Test Paket.");
+			//starts graceful restart
+			sendPacket(Socket, NeiAddr, EIGRP_OPC_UPDATE, 5, Seq, ntohl(0));
+			//sendPacket(Socket, NeiAddr, EIGRP_OPC_UPDATE, 15, Seq, ntohl(0));
+			jeSusedstvo = 0;
+			Seq++;
+			return;
+		}
+
 }
