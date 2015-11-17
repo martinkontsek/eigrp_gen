@@ -22,6 +22,9 @@
 #include "eigrp_struct.h"
 #include "eigrp_const.h"
 
+struct in_addr NeiAddr;
+
+
 unsigned short calcChecksum(void *paStruct, int paStructLen);
 void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck);

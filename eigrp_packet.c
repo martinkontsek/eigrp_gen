@@ -7,9 +7,10 @@
 
 #include "eigrp_packet.h"
 
-int Seq = 100;
+
 int jeSusedstvo = 0;
-struct in_addr NeiAddr;
+int Seq = 100;
+
 
 unsigned short calcChecksum(void *paStruct, int paStructLen)
 {
@@ -109,6 +110,14 @@ void receivePacket(int Socket)
 		struct iphdr *IP_Header;
 		struct EIGRP_Header_t *RecvHdr;
 
+		struct in_addr SendAddr;
+		if(inet_aton(EIGRP_MCAST, &SendAddr) == 0)
+		{
+			fprintf(stderr, "inet_aton: Invalid destination Address\n");
+			close(Socket);
+			exit(EXIT_ERROR);
+		}
+
 		memset(&RecvPacket, 0, 10000);
 		memset(&RecvAddr, 0, AddrLen);
 		if((Bytes = recvfrom(Socket, RecvPacket, 10000, 0, (struct sockaddr *)&RecvAddr, &AddrLen)) == -1)
@@ -156,16 +165,12 @@ void receivePacket(int Socket)
 			return;
 		}
 
-
-		if(jeSusedstvo == 1)
+		if(ntohl(RecvHdr->SeqNum) != 0)
 		{
-			printf("Test Paket.");
-			//starts graceful restart
-			sendPacket(Socket, NeiAddr, EIGRP_OPC_UPDATE, 5, Seq, ntohl(0));
-			//sendPacket(Socket, NeiAddr, EIGRP_OPC_UPDATE, 15, Seq, ntohl(0));
-			jeSusedstvo = 0;
+			//send ack packet
+			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum));
 			Seq++;
-			return;
 		}
+
 
 }

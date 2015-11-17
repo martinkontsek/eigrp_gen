@@ -39,6 +39,61 @@ void helloThread(void *arg)
 	}
 }
 
+void sendUserThread(void *arg)
+{
+	int Socket = arg;
+	struct in_addr SendAddr, MultiAddr;
+	unsigned char packetType;
+	unsigned int flags;
+	unsigned int seqNum;
+	unsigned int ackNum;
+
+	if(inet_aton(EIGRP_MCAST, &MultiAddr) == 0)
+	{
+		fprintf(stderr, "inet_aton: Invalid destination Address\n");
+		close(Socket);
+		exit(EXIT_ERROR);
+	}
+
+	char buffer[10];
+
+	for(;;)
+	{
+		printf("Input packet address and packet type [m-u][h-u]:");
+		fgets(buffer, 10, stdin);
+
+		if(buffer[0] == 'm')
+			SendAddr = MultiAddr;
+		else
+			SendAddr = NeiAddr;
+
+		if(buffer[1] == 'h')
+			packetType = EIGRP_OPC_HELLO;
+		else
+			packetType = EIGRP_OPC_UPDATE;
+
+		memset(buffer, '\0', 10);
+		printf("Input packet flags:");
+		fgets(buffer, 10, stdin);
+		flags = atoi(buffer);
+
+		memset(buffer, '\0', 10);
+		printf("Input packet sequence number:");
+		fgets(buffer, 10, stdin);
+		seqNum = atoi(buffer);
+
+		memset(buffer, '\0', 10);
+		printf("Input packet flags:");
+		fgets(buffer, 10, stdin);
+		ackNum = atoi(buffer);
+
+		printf("\n\n");
+
+		sendPacket(Socket, SendAddr, packetType, flags, seqNum, ackNum);
+		//Seq++;
+	}
+}
+
 int main(void)
 {
 	int Socket;
@@ -87,7 +142,8 @@ int main(void)
 	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
 
 
-	//sendPacket(Socket);
+	pthread_t SendFromUserThread;
+	pthread_create(&SendFromUserThread, NULL, sendUserThread, (void *) Socket);
 
 
 	for(;;)
