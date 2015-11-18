@@ -38,6 +38,7 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 	struct EIGRP_Header_t Header;
 	struct EIGRP_TLV_Param_t TLV_Param;
 	struct EIGRP_TLV_SW_Version_t TLV_Version;
+	struct EIGRP_TLV_Route_t TLV_Route;
 	struct msghdr MsgHead;
 
 
@@ -83,6 +84,29 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		checksum += calcChecksum(&TLV_Version, sizeof(TLV_Version));
 		StructCount++;
 	}
+
+	if( (paPacketType == EIGRP_OPC_UPDATE) && (paFlags == 8) )
+	{
+		memset(&TLV_Route, 0, sizeof(TLV_Route));
+		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
+		TLV_Route.Length = htons(EIGRP_TLV_ROUTE_LEN);
+		TLV_Route.NextHop = htonl(EIGRP_TLV_ROUTE_NHOP);
+		TLV_Route.Delay = htonl(EIGRP_TLV_ROUTE_DELAY);
+		TLV_Route.Bandwidth = htonl(EIGRP_TLV_ROUTE_BW);
+		TLV_Route.MTUaHC = htonl(EIGRP_TLV_ROUTE_MTUHC);
+		TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
+		TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
+		TLV_Route.PrefixLen = EIGRP_TLV_ROUTE_PREFLEN;
+		TLV_Route.Dest1 = 192;
+		TLV_Route.Dest2 = 168;
+		TLV_Route.Dest3 = 111;
+		bufs[StructCount].iov_base = &TLV_Route;
+		bufs[StructCount].iov_len = sizeof(TLV_Route);
+		checksum += calcChecksum(&TLV_Route, sizeof(TLV_Route));
+		StructCount++;
+
+	}
+
 
 	Header.Checksum = ~checksum;
 
