@@ -85,7 +85,7 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		StructCount++;
 	}
 
-	if( (paPacketType == EIGRP_OPC_UPDATE) && (paFlags == 8) )
+	if( (paPacketType == EIGRP_OPC_UPDATE) && ((paFlags == 8) || (paFlags == 10)) )
 	{
 		memset(&TLV_Route, 0, sizeof(TLV_Route));
 		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
@@ -181,19 +181,19 @@ void receivePacket(int Socket)
 			return;
 		}
 
-		if((opc==1) && (ntohl(RecvHdr->Flags) == 8))
+		if((opc==1) && ((ntohl(RecvHdr->Flags) == 8) || (ntohl(RecvHdr->Flags) == 10)))
 		{
-			sendPacket(Socket, src, EIGRP_OPC_UPDATE, 8, Seq, ntohl(RecvHdr->SeqNum));
+			sendPacket(Socket, src, EIGRP_OPC_UPDATE, ntohl(RecvHdr->Flags), Seq, ntohl(RecvHdr->SeqNum));
+			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum));
 			jeSusedstvo = 1;
 			Seq++;
 			return;
 		}
 
-		if(ntohl(RecvHdr->SeqNum) != 0)
+		if(ntohl(RecvHdr->SeqNum) != 0 )
 		{
 			//send ack packet
 			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum));
-			Seq++;
 		}
 
 

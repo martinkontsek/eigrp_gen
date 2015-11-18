@@ -17,7 +17,7 @@
 #define EIGRP_ASN				1
 
 /* EIGRP Timers*/
-#define HELLO_INTERVAL			5
+#define HELLO_INTERVAL			100
 
 /* EIGRP Packet Opcodes */
 #define EIGRP_OPC_UPDATE 		1
@@ -26,7 +26,7 @@
 /* EIGRP TLV Param */
 #define EIGRP_TLV_PARAM_TYPE 	0x0001
 #define EIGRP_TLV_PARAM_LEN 	12
-#define EIGRP_TLV_PARAM_HOLD 	15
+#define EIGRP_TLV_PARAM_HOLD 	300
 
 /* EIGRP TLV Version */
 #define EIGRP_TLV_VER_TYPE 		0x0004

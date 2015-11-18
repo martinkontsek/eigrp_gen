@@ -35,7 +35,7 @@ void helloThread(void *arg)
 	for(;;)
 	{
 		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0);
-		sleep(5);
+		sleep(HELLO_INTERVAL);
 	}
 }
 
@@ -83,7 +83,7 @@ void sendUserThread(void *arg)
 		seqNum = atoi(buffer);
 
 		memset(buffer, '\0', 10);
-		printf("Input packet flags:");
+		printf("Input packet ack number:");
 		fgets(buffer, 10, stdin);
 		ackNum = atoi(buffer);
 
@@ -138,8 +138,8 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	pthread_t SendHelloThread;
-	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
+//	pthread_t SendHelloThread;
+//	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
 
 
 	pthread_t SendFromUserThread;
