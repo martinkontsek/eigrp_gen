@@ -56,9 +56,13 @@ void sendUserThread(void *arg)
 	}
 
 	char buffer[10];
+	int hello = 0;
 
 	for(;;)
 	{
+		seqNum = 0;
+		ackNum = 0;
+
 		printf("Input packet address and packet type [m-u][h-u]:");
 		fgets(buffer, 10, stdin);
 
@@ -68,24 +72,33 @@ void sendUserThread(void *arg)
 			SendAddr = NeiAddr;
 
 		if(buffer[1] == 'h')
+		{
 			packetType = EIGRP_OPC_HELLO;
+			hello = 1;
+		}
 		else
+		{
 			packetType = EIGRP_OPC_UPDATE;
+			hello = 0;
+		}
 
 		memset(buffer, '\0', 10);
 		printf("Input packet flags:");
 		fgets(buffer, 10, stdin);
 		flags = atoi(buffer);
 
-		memset(buffer, '\0', 10);
-		printf("Input packet sequence number:");
-		fgets(buffer, 10, stdin);
-		seqNum = atoi(buffer);
+		if(!hello)
+		{
+			memset(buffer, '\0', 10);
+			printf("Input packet sequence number:");
+			fgets(buffer, 10, stdin);
+			seqNum = atoi(buffer);
 
-		memset(buffer, '\0', 10);
-		printf("Input packet ack number:");
-		fgets(buffer, 10, stdin);
-		ackNum = atoi(buffer);
+			memset(buffer, '\0', 10);
+			printf("Input packet ack number:");
+			fgets(buffer, 10, stdin);
+			ackNum = atoi(buffer);
+		}
 
 		printf("\n\n");
 

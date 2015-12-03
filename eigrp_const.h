@@ -31,7 +31,7 @@
 /* EIGRP TLV Version */
 #define EIGRP_TLV_VER_TYPE 		0x0004
 #define EIGRP_TLV_VER_LEN 		8
-#define EIGRP_TLV_VER_REL	 	0x0c22
+#define EIGRP_TLV_VER_REL	 	0x0c04
 #define EIGRP_TLV_VER_TLVVER 	0x0102
 
 /* EIGRP TLV Route */
