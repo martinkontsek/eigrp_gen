@@ -10,6 +10,7 @@
 
 int jeSusedstvo = 0;
 int Seq = 100;
+int cakamNaAck = 0;
 
 
 unsigned short calcChecksum(void *paStruct, int paStructLen)
@@ -173,14 +174,42 @@ void receivePacket(int Socket)
 //				ntohl(RecvHdr->AckNum),
 //				ntohs(RecvHdr->ASN));
 
-		if((opc==1) && (ntohl(RecvHdr->Flags) == 1))
+		if(cakamNaAck != 0)
 		{
-			sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum));
-			NeiAddr = src;
-			Seq++;
-			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
-			Seq++;
+			if(opc== EIGRP_OPC_HELLO && (ntohl(RecvHdr->AckNum) == cakamNaAck))
+			{
+				cakamNaAck = 0;
+				if(jeSusedstvo == 2)
+					jeSusedstvo = 1;
+
+				if(jeSusedstvo == 1)
+					jeSusedstvo = 0;
+				return;
+			}
+		}
+
+		if((opc==EIGRP_OPC_UPDATE) && (ntohl(RecvHdr->Flags) == 1))
+		{
+			if(jeSusedstvo == 0)
+			{
+				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, 0);
+				NeiAddr = src;
+				jeSusedstvo = 3;
+			}
+
+			if(jeSusedstvo == 3)
+			{
+				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum));
+				NeiAddr = src;
+				jeSusedstvo = 2;
+				cakamNaAck = Seq;
+				Seq++;
+			}
 			return;
+
+//			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
+//			Seq++;
+//			return;
 		}
 
 //		if((opc==1) && ((ntohl(RecvHdr->Flags) == 8) || (ntohl(RecvHdr->Flags) == 0)))
@@ -191,6 +220,14 @@ void receivePacket(int Socket)
 //			Seq++;
 //			//return;
 //		}
+
+		if(jeSusedstvo == 1)
+		{
+			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
+			cakamNaAck = Seq;
+			Seq++;
+			return;
+		}
 
 		if(ntohl(RecvHdr->SeqNum) != 0 )
 		{
