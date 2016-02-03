@@ -97,15 +97,14 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		TLV_Route.MTUaHC = htonl(EIGRP_TLV_ROUTE_MTUHC);
 		TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
 		TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
-		TLV_Route.PrefixLen = EIGRP_TLV_ROUTE_PREFLEN;
-		TLV_Route.Dest1 = 192;
-		TLV_Route.Dest2 = 168;
-		TLV_Route.Dest3 = 111;
+		TLV_Route.PrefixLen = 24;
+		TLV_Route.Dest1 = 10;
+		TLV_Route.Dest2 = 10;
+		TLV_Route.Dest3 = 5;
 		bufs[StructCount].iov_base = &TLV_Route;
 		bufs[StructCount].iov_len = sizeof(TLV_Route);
 		checksum += calcChecksum(&TLV_Route, sizeof(TLV_Route));
 		StructCount++;
-
 	}
 
 

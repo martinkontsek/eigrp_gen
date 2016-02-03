@@ -47,8 +47,6 @@ struct EIGRP_TLV_Route_t
 	unsigned short Type;
 	unsigned short Length;
 	unsigned int NextHop;
-
-	/* Legacy metric */
 	unsigned int Delay;
 	unsigned int Bandwidth;
 	unsigned int MTUaHC;
@@ -56,7 +54,6 @@ struct EIGRP_TLV_Route_t
 	unsigned char Load;
 	unsigned char RouteTag;
 	unsigned char Flags;
-
 	unsigned char PrefixLen;
 	unsigned char Dest1;
 	unsigned char Dest2;
