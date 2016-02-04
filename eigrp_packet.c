@@ -29,7 +29,7 @@ unsigned short calcChecksum(void *paStruct, int paStructLen)
 }
 
 void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType,
-		unsigned int paFlags, unsigned int paSeq, unsigned int paAck)
+		unsigned int paFlags, unsigned int paSeq, unsigned int paAck, int paSendRoute, int paRouteType)
 {
 	struct sockaddr_in SendAddr;
 	unsigned short checksum = 0;
@@ -86,7 +86,8 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		StructCount++;
 	}
 
-	if( (paPacketType == EIGRP_OPC_UPDATE) && ((paFlags == 0) || (paFlags == 10)) )
+	//if( (paPacketType == EIGRP_OPC_UPDATE) && ((paFlags == 0) || (paFlags == 10)) )
+	if(paSendRoute == 1)
 	{
 		memset(&TLV_Route, 0, sizeof(TLV_Route));
 		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
@@ -98,9 +99,17 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
 		TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
 		TLV_Route.PrefixLen = 24;
-		TLV_Route.Dest1 = 10;
-		TLV_Route.Dest2 = 10;
-		TLV_Route.Dest3 = 5;
+		if(paRouteType == 0)
+		{
+			TLV_Route.Dest1 = 10;
+			TLV_Route.Dest2 = 10;
+			TLV_Route.Dest3 = 5;
+		} else if(paRouteType == 1)
+		{
+			TLV_Route.Dest1 = 10;
+			TLV_Route.Dest2 = 9;
+			TLV_Route.Dest3 = 9;
+		}
 		bufs[StructCount].iov_base = &TLV_Route;
 		bufs[StructCount].iov_len = sizeof(TLV_Route);
 		checksum += calcChecksum(&TLV_Route, sizeof(TLV_Route));
@@ -191,14 +200,14 @@ void receivePacket(int Socket)
 		{
 			if(jeSusedstvo == 0)
 			{
-				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, 0);
+				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0);
 				NeiAddr = src;
 				jeSusedstvo = 3;
 			}
 
 			if(jeSusedstvo == 3)
 			{
-				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum));
+				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum), 0, 0);
 				NeiAddr = src;
 				jeSusedstvo = 2;
 				cakamNaAck = Seq;
@@ -222,7 +231,7 @@ void receivePacket(int Socket)
 
 		if(jeSusedstvo == 1)
 		{
-			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
+			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0, 0, 0);
 			cakamNaAck = Seq;
 			Seq++;
 			return;
@@ -231,7 +240,7 @@ void receivePacket(int Socket)
 		if(ntohl(RecvHdr->SeqNum) != 0 )
 		{
 			//send ack packet
-			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum));
+			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0);
 		}
 
 

@@ -34,7 +34,7 @@ void helloThread(void *arg)
 
 	for(;;)
 	{
-		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0);
+		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0);
 		sleep(HELLO_INTERVAL);
 	}
 }
@@ -47,6 +47,8 @@ void sendUserThread(void *arg)
 	unsigned int flags;
 	unsigned int seqNum;
 	unsigned int ackNum;
+	int sendRoute = 0;
+	int routeType = 0;
 
 	if(inet_aton(EIGRP_MCAST, &MultiAddr) == 0)
 	{
@@ -98,11 +100,24 @@ void sendUserThread(void *arg)
 			printf("Input packet ack number:");
 			fgets(buffer, 10, stdin);
 			ackNum = atoi(buffer);
+
+			memset(buffer, '\0', 10);
+			printf("Do you want to send route (y/n):");
+			fgets(buffer, 10, stdin);
+			if(buffer[0] == 'y')
+			{
+				sendRoute = 1;
+
+				memset(buffer, '\0', 10);
+				printf("Input route index:");
+				fgets(buffer, 10, stdin);
+				routeType = atoi(buffer);
+			}
 		}
 
 		printf("\n\n");
 
-		sendPacket(Socket, SendAddr, packetType, flags, seqNum, ackNum);
+		sendPacket(Socket, SendAddr, packetType, flags, seqNum, ackNum, sendRoute, routeType);
 		//Seq++;
 	}
 }

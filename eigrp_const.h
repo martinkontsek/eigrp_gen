@@ -44,6 +44,7 @@
 #define EIGRP_TLV_ROUTE_MTUHC 	0x0005ea00
 #define EIGRP_TLV_ROUTE_RELIAB  255
 #define EIGRP_TLV_ROUTE_LOAD 	1
+#define EIGRP_MAX_DELAY			0xffffffffU
 
 
 #define EXIT_ERROR 				1
