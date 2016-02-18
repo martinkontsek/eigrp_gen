@@ -21,6 +21,8 @@
 
 /* EIGRP Packet Opcodes */
 #define EIGRP_OPC_UPDATE 		1
+#define EIGRP_OPC_QUERY 		3
+#define EIGRP_OPC_REPLY 		4
 #define EIGRP_OPC_HELLO 		5
 
 /* EIGRP TLV Param */
@@ -46,6 +48,8 @@
 #define EIGRP_TLV_ROUTE_LOAD 	1
 #define EIGRP_MAX_DELAY			0xffffffffU
 
+/* EIGRP TLV Route Flags */
+#define EIGRP_ROUTE_FLAG_ACTIVE	0x04
 
 #define EXIT_ERROR 				1
 

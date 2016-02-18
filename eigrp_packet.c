@@ -93,11 +93,17 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
 		TLV_Route.Length = htons(EIGRP_TLV_ROUTE_LEN);
 		TLV_Route.NextHop = htonl(EIGRP_TLV_ROUTE_NHOP);
-		TLV_Route.Delay = htonl(EIGRP_TLV_ROUTE_DELAY);
-		TLV_Route.Bandwidth = htonl(EIGRP_TLV_ROUTE_BW);
-		TLV_Route.MTUaHC = htonl(EIGRP_TLV_ROUTE_MTUHC);
-		TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
-		TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
+		if(paPacketType == EIGRP_OPC_QUERY)
+		{
+			TLV_Route.Delay = htonl(EIGRP_MAX_DELAY);
+			TLV_Route.Flags = EIGRP_ROUTE_FLAG_ACTIVE;
+		} else {
+			TLV_Route.Delay = htonl(EIGRP_TLV_ROUTE_DELAY);
+			TLV_Route.Bandwidth = htonl(EIGRP_TLV_ROUTE_BW);
+			TLV_Route.MTUaHC = htonl(EIGRP_TLV_ROUTE_MTUHC);
+			TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
+			TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
+		}
 		TLV_Route.PrefixLen = 24;
 		if(paRouteType == 0)
 		{

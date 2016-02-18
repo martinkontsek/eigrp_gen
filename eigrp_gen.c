@@ -65,7 +65,7 @@ void sendUserThread(void *arg)
 		seqNum = 0;
 		ackNum = 0;
 
-		printf("Input packet address and packet type [m-u][h-u]:");
+		printf("Input packet address and packet type [m,u][h,q,r,u]:");
 		fgets(buffer, 10, stdin);
 
 		if(buffer[0] == 'm')
@@ -78,7 +78,17 @@ void sendUserThread(void *arg)
 			packetType = EIGRP_OPC_HELLO;
 			hello = 1;
 		}
-		else
+		else if(buffer[1] == 'q')
+		{
+			packetType = EIGRP_OPC_QUERY;
+			hello = 0;
+		}
+		else if(buffer[1] == 'r')
+		{
+			packetType = EIGRP_OPC_REPLY;
+			hello = 0;
+		}
+		else if(buffer[1] == 'u')
 		{
 			packetType = EIGRP_OPC_UPDATE;
 			hello = 0;
