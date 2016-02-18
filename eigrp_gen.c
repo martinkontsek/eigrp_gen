@@ -34,7 +34,7 @@ void helloThread(void *arg)
 
 	for(;;)
 	{
-		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0);
+		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0, 0);
 		sleep(HELLO_INTERVAL);
 	}
 }
@@ -44,11 +44,8 @@ void sendUserThread(void *arg)
 	int Socket = arg;
 	struct in_addr SendAddr, MultiAddr;
 	unsigned char packetType;
-	unsigned int flags;
-	unsigned int seqNum;
-	unsigned int ackNum;
-	int sendRoute = 0;
-	int routeType = 0;
+	unsigned int flags, seqNum, ackNum;
+	int hello, sendRoute, routeType, maxDelay;
 
 	if(inet_aton(EIGRP_MCAST, &MultiAddr) == 0)
 	{
@@ -58,12 +55,14 @@ void sendUserThread(void *arg)
 	}
 
 	char buffer[10];
-	int hello = 0;
 
 	for(;;)
 	{
 		seqNum = 0;
 		ackNum = 0;
+		sendRoute = 0;
+		routeType = 0;
+		maxDelay = 0;
 
 		printf("Input packet address and packet type [m,u][h,q,r,u]:");
 		fgets(buffer, 10, stdin);
@@ -82,6 +81,7 @@ void sendUserThread(void *arg)
 		{
 			packetType = EIGRP_OPC_QUERY;
 			hello = 0;
+			maxDelay = 1;
 		}
 		else if(buffer[1] == 'r')
 		{
@@ -122,12 +122,22 @@ void sendUserThread(void *arg)
 				printf("Input route index:");
 				fgets(buffer, 10, stdin);
 				routeType = atoi(buffer);
+
+				if(packetType != EIGRP_OPC_QUERY)
+				{
+					memset(buffer, '\0', 10);
+					printf("Do you want to set max delay (y/n):");
+					fgets(buffer, 10, stdin);
+					if(buffer[0] == 'y')
+						maxDelay = 1;
+				}
 			}
 		}
 
 		printf("\n\n");
 
-		sendPacket(Socket, SendAddr, packetType, flags, seqNum, ackNum, sendRoute, routeType);
+		sendPacket(Socket, SendAddr, packetType, flags, seqNum,
+				ackNum, sendRoute, routeType, maxDelay);
 		//Seq++;
 	}
 }
