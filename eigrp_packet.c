@@ -16,13 +16,15 @@ int cakamNaAck = 0;
 unsigned short calcChecksum(void *paStruct, int paStructLen)
 {
 	int i;
-	unsigned short checksum = 0;
+	unsigned int checksum = 0;
 	unsigned short *smernik;
 
 	smernik = (unsigned short *)paStruct;
 	for(i=0; i<paStructLen/2; i++)
 	{
 		checksum += *(smernik+i);
+		if(checksum > 0xffff)
+			checksum -= 0xffff;
 	}
 
 	return checksum;
