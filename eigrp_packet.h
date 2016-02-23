@@ -25,7 +25,7 @@
 struct in_addr NeiAddr;
 
 
-unsigned short calcChecksum(void *paStruct, int paStructLen);
+unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int paStructLen);
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
 		int paSendRoute, int paRouteType, int paMaxDelay);

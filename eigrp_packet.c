@@ -13,10 +13,10 @@ int Seq = 100;
 int cakamNaAck = 0;
 
 
-unsigned short calcChecksum(void *paStruct, int paStructLen)
+unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int paStructLen)
 {
 	int i;
-	unsigned int checksum = 0;
+	unsigned int checksum = paStartChecksum;
 	unsigned short *smernik;
 
 	smernik = (unsigned short *)paStruct;
@@ -60,7 +60,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	Header.ASN = htons(EIGRP_ASN);
 	bufs[StructCount].iov_base = &Header;
 	bufs[StructCount].iov_len = sizeof(Header);
-	checksum += calcChecksum(&Header, sizeof(Header));
+	checksum = calcChecksum(checksum, &Header, sizeof(Header));
 	StructCount++;
 
 	if(paPacketType == EIGRP_OPC_HELLO)
@@ -74,7 +74,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		TLV_Param.HoldTime = htons(EIGRP_TLV_PARAM_HOLD);
 		bufs[StructCount].iov_base = &TLV_Param;
 		bufs[StructCount].iov_len = sizeof(TLV_Param);
-		checksum += calcChecksum(&TLV_Param, sizeof(TLV_Param));
+		checksum = calcChecksum(checksum, &TLV_Param, sizeof(TLV_Param));
 		StructCount++;
 
 
@@ -85,7 +85,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		TLV_Version.TLV_Ver = htons(EIGRP_TLV_VER_TLVVER);
 		bufs[StructCount].iov_base = &TLV_Version;
 		bufs[StructCount].iov_len = sizeof(TLV_Version);
-		checksum += calcChecksum(&TLV_Version, sizeof(TLV_Version));
+		checksum = calcChecksum(checksum, &TLV_Version, sizeof(TLV_Version));
 		StructCount++;
 	}
 
@@ -116,13 +116,13 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 			TLV_Route.Dest3 = 5;
 		} else if(paRouteType == 1)
 		{
-			TLV_Route.Dest1 = 10;
+			TLV_Route.Dest1 = 192;
 			TLV_Route.Dest2 = 9;
 			TLV_Route.Dest3 = 9;
 		}
 		bufs[StructCount].iov_base = &TLV_Route;
 		bufs[StructCount].iov_len = sizeof(TLV_Route);
-		checksum += calcChecksum(&TLV_Route, sizeof(TLV_Route));
+		checksum = calcChecksum(checksum, &TLV_Route, sizeof(TLV_Route));
 		StructCount++;
 	}
 
