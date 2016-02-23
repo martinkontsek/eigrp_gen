@@ -2,7 +2,7 @@
  * eigrp_struct.h
  *
  *  Created on: Nov 11, 2015
- *      Author: root
+ *      Author: Martin Kontsek
  */
 
 #ifndef EIGRP_STRUCT_H_

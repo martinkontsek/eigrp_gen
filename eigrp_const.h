@@ -2,7 +2,7 @@
  * eigrp_const.h
  *
  *  Created on: Oct 28, 2015
- *      Author: Martin
+ *      Author: Martin Kontsek
  */
 
 #ifndef EIGRP_CONST_H_

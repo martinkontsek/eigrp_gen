@@ -2,7 +2,7 @@
  * eigrp_packet.c
  *
  *  Created on: Nov 11, 2015
- *      Author: root
+ *      Author: Martin Kontsek
  */
 
 #include "eigrp_packet.h"
@@ -30,7 +30,7 @@ unsigned short calcChecksum(void *paStruct, int paStructLen)
 	return checksum;
 }
 
-void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType,
+void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
 		int paSendRoute, int paRouteType, int paMaxDelay)
 {
@@ -89,7 +89,6 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 		StructCount++;
 	}
 
-	//if( (paPacketType == EIGRP_OPC_UPDATE) && ((paFlags == 0) || (paFlags == 10)) )
 	if(paSendRoute == 1)
 	{
 		memset(&TLV_Route, 0, sizeof(TLV_Route));
@@ -137,15 +136,15 @@ void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType
 	MsgHead.msg_iovlen = StructCount;
 
 
-	if(sendmsg(Socket, &MsgHead, 0) == -1)
+	if(sendmsg(paSocket, &MsgHead, 0) == -1)
 	{
 		perror("sendmsg");
-		close(Socket);
+		close(paSocket);
 		exit(EXIT_ERROR);
 	}
 }
 
-void receivePacket(int Socket)
+void receivePacket(int paSocket)
 {
 	char RecvPacket[10000];
 		ssize_t Bytes;
@@ -158,13 +157,13 @@ void receivePacket(int Socket)
 		if(inet_aton(EIGRP_MCAST, &SendAddr) == 0)
 		{
 			fprintf(stderr, "inet_aton: Invalid destination Address\n");
-			close(Socket);
+			close(paSocket);
 			exit(EXIT_ERROR);
 		}
 
 		memset(&RecvPacket, 0, 10000);
 		memset(&RecvAddr, 0, AddrLen);
-		if((Bytes = recvfrom(Socket, RecvPacket, 10000, 0, (struct sockaddr *)&RecvAddr, &AddrLen)) == -1)
+		if((Bytes = recvfrom(paSocket, RecvPacket, 10000, 0, (struct sockaddr *)&RecvAddr, &AddrLen)) == -1)
 		{
 			perror("recvfrom");
 			return;
@@ -211,14 +210,14 @@ void receivePacket(int Socket)
 		{
 			if(jeSusedstvo == 0)
 			{
-				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0);
+				sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0);
 				NeiAddr = src;
 				jeSusedstvo = 3;
 			}
 
 			if(jeSusedstvo == 3)
 			{
-				sendPacket(Socket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum), 0, 0, 0);
+				sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum), 0, 0, 0);
 				NeiAddr = src;
 				jeSusedstvo = 2;
 				cakamNaAck = Seq;
@@ -242,7 +241,7 @@ void receivePacket(int Socket)
 
 		if(jeSusedstvo == 1)
 		{
-			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0, 0, 0, 0);
+			sendPacket(paSocket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0, 0, 0, 0);
 			cakamNaAck = Seq;
 			Seq++;
 			return;
@@ -251,7 +250,7 @@ void receivePacket(int Socket)
 		if(ntohl(RecvHdr->SeqNum) != 0 )
 		{
 			//send ack packet
-			sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0);
+			sendPacket(paSocket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0);
 		}
 
 

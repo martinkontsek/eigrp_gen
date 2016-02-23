@@ -2,7 +2,7 @@
  * rigrp_gen.c
  *
  *  Created on: Oct 21, 2015
- *      Author: Martin
+ *      Author: Martin Kontsek
  */
 #include <stdlib.h>
 #include <stdio.h>

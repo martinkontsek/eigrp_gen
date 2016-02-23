@@ -2,7 +2,7 @@
  * eigrp_packet.h
  *
  *  Created on: Oct 28, 2015
- *      Author: Martin
+ *      Author: Martin Kontsek
  */
 
 #ifndef EIGRP_PACKET_H_
@@ -26,9 +26,9 @@ struct in_addr NeiAddr;
 
 
 unsigned short calcChecksum(void *paStruct, int paStructLen);
-void sendPacket(int Socket, struct in_addr paAddress, unsigned char paPacketType,
+void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
 		int paSendRoute, int paRouteType, int paMaxDelay);
-void receivePacket(int Socket);
+void receivePacket(int paSocket);
 
 #endif /* EIGRP_PACKET_H_ */
