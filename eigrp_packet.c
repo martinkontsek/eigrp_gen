@@ -55,7 +55,13 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	Header.Version = EIGRP_VERSION;
 	Header.Opcode = paPacketType;
 	Header.Flags = htonl(paFlags);
-	Header.SeqNum = htonl(paSeq);
+	if(paSeq == -1)
+	{
+		Header.SeqNum = htonl(Seq);
+		Seq++;
+	}
+	else
+		Header.SeqNum = htonl(paSeq);
 	Header.AckNum = htonl(paAck);
 	Header.ASN = htons(EIGRP_ASN);
 	bufs[StructCount].iov_base = &Header;
