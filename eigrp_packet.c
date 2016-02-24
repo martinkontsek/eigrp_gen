@@ -217,7 +217,10 @@ void receivePacket(int paSocket)
 //				dst_s,
 //				Bytes,
 //				IP_Header->protocol,
-//				(opc==5)?"Hello":((opc==1)?"Update":opc),
+//				(opc==EIGRP_OPC_HELLO)?"Hello":
+//						((opc==EIGRP_OPC_UPDATE)?"Update":
+//								((opc==EIGRP_OPC_QUERY)?"Query":
+//										((opc==EIGRP_OPC_REPLY)?"Reply":opc))),
 //				opc,
 //				ntohl(RecvHdr->Flags),
 //				ntohl(RecvHdr->SeqNum),
