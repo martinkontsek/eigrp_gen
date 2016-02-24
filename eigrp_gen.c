@@ -20,7 +20,9 @@
 #include "eigrp_struct.h"
 #include "eigrp_const.h"
 
-
+/*
+ * Vo vlakne posiela HELLO pakety
+ */
 void helloThread(void *arg)
 {
 	int Socket = arg;
@@ -39,6 +41,9 @@ void helloThread(void *arg)
 	}
 }
 
+/*
+ * Posielanie pouzivatelom zadanych paketov
+ */
 void sendUserThread(void *arg)
 {
 	int Socket = arg;
@@ -138,7 +143,6 @@ void sendUserThread(void *arg)
 
 		sendPacket(Socket, SendAddr, packetType, flags, seqNum,
 				ackNum, sendRoute, routeType, maxDelay);
-		//Seq++;
 	}
 }
 
@@ -161,6 +165,7 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
+	/* Posielanie paketov cez pozadovane rozhranie */
 	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
 	{
 		perror("setsockopt_sol");
@@ -168,8 +173,7 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-
-	//clenstvo v multicast skupine
+	/* clenstvo v multicast skupine */
 	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
 	{
 		fprintf(stderr, "inet_aton: Invalid multicast address\n");
@@ -186,14 +190,15 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
+	/* Vlakno na periodicke posielanie HELLO paketov */
 //	pthread_t SendHelloThread;
 //	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
 
-
+	/* Vlakno na posielanie paketov uzivatelom */
 	pthread_t SendFromUserThread;
 	pthread_create(&SendFromUserThread, NULL, sendUserThread, (void *) Socket);
 
-
+	/* prijima pakety a reaguje na ne */
 	for(;;)
 	{
 		receivePacket(Socket);

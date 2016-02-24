@@ -12,13 +12,20 @@ int jeSusedstvo = 0;
 int Seq = 100;
 int cakamNaAck = 0;
 
-
+/*
+ * Vypocita checksum EIGRP paketu z bloku dat (paStruct, paStructLen)
+ * a pripocita aj checksum predchadzajuceho bloku dat (paStartChecksum)
+ */
 unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int paStructLen)
 {
 	int i;
 	unsigned int checksum = paStartChecksum;
 	unsigned short *smernik;
 
+	/*
+	 * Blok dat prechadza po dvoch bajtoch,
+	 * scitava ich, kontroluje, ci nastalo pretecenie
+	 */
 	smernik = (unsigned short *)paStruct;
 	for(i=0; i<paStructLen/2; i++)
 	{
@@ -26,10 +33,22 @@ unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int 
 		if(checksum > 0xffff)
 			checksum -= 0xffff;
 	}
-
 	return checksum;
 }
 
+/*
+ * Posle EIGRP paket
+ *
+ * paSocket - socket, cez ktory sa paket posle
+ * paAddress - adresa, na ktoru sa paket odosle
+ * paPacketType - typ EIGRP paketu (Hello, Update...)
+ * paFlags - ake flagy ma paket obsahovat
+ * paSeq - sekvencne cislo paketu, ak -1, tak si program cisluje sam
+ * paAck - sekvencne cislo, ktore chceme potvrdit
+ * paSendRoute - 1 ak chceme poslat v pakete cestu, 0 ak nie
+ * paRouteType - index predkonfigurovanej cesty, ktora sa ma poslat
+ * paMaxDelay - 1 ak chceme v pakete MAX hodnotu delay, 0 standardna hodnota
+ */
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
 		int paSendRoute, int paRouteType, int paMaxDelay)
@@ -45,16 +64,17 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	struct EIGRP_TLV_Route_t TLV_Route;
 	struct msghdr MsgHead;
 
-
+	/* Priprava adresy */
 	memset(&SendAddr, 0, sizeof(SendAddr));
 	SendAddr.sin_family = AF_INET;
 	SendAddr.sin_addr = paAddress;
 
-
+	/* Hlavicka EIGRP paketu */
 	memset(&Header, 0, sizeof(Header));
 	Header.Version = EIGRP_VERSION;
 	Header.Opcode = paPacketType;
 	Header.Flags = htonl(paFlags);
+	/* ak je paSeq -1, pouzijeme hodnotu z vnutorneho pocitadla */
 	if(paSeq == -1)
 	{
 		Header.SeqNum = htonl(Seq);
@@ -69,9 +89,9 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	checksum = calcChecksum(checksum, &Header, sizeof(Header));
 	StructCount++;
 
+	/* TLV pre HELLO paket */
 	if(paPacketType == EIGRP_OPC_HELLO)
 	{
-
 		memset(&TLV_Param, 0, sizeof(TLV_Param));
 		TLV_Param.Type = htons(EIGRP_TLV_PARAM_TYPE);
 		TLV_Param.Length = htons(EIGRP_TLV_PARAM_LEN);
@@ -82,7 +102,6 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		bufs[StructCount].iov_len = sizeof(TLV_Param);
 		checksum = calcChecksum(checksum, &TLV_Param, sizeof(TLV_Param));
 		StructCount++;
-
 
 		memset(&TLV_Version, 0, sizeof(TLV_Version));
 		TLV_Version.Type = htons(EIGRP_TLV_VER_TYPE);
@@ -101,6 +120,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
 		TLV_Route.Length = htons(EIGRP_TLV_ROUTE_LEN);
 		TLV_Route.NextHop = htonl(EIGRP_TLV_ROUTE_NHOP);
+		/* V QUERY pakete sa posle MAX delay a flag aktivnej cesty */
 		if(paPacketType == EIGRP_OPC_QUERY)
 		{
 			TLV_Route.Delay = htonl(EIGRP_MAX_DELAY);
@@ -112,9 +132,11 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 			TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
 			TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
 		}
+		/* Ak je paMaxDelay 1, nastavime MAX delay */
 		if(paMaxDelay == 1)
 			TLV_Route.Delay = htonl(EIGRP_MAX_DELAY);
 		TLV_Route.PrefixLen = 24;
+		/* Zapiseme pozadovanu cestu do paketu */
 		if(paRouteType == 0)
 		{
 			TLV_Route.Dest1 = 10;
@@ -132,16 +154,17 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		StructCount++;
 	}
 
-
+	/* Do hlavicky paketu zapiseme bitovy doplnok vypocitanej checksum */
 	Header.Checksum = ~checksum;
 
+	/* Pripravime Scatter-Gatter strukturu */
 	memset(&MsgHead, 0, sizeof(MsgHead));
 	MsgHead.msg_name = &SendAddr;
 	MsgHead.msg_namelen = sizeof(SendAddr);
 	MsgHead.msg_iov = (void *)bufs;
 	MsgHead.msg_iovlen = StructCount;
 
-
+	/* Paket odosleme */
 	if(sendmsg(paSocket, &MsgHead, 0) == -1)
 	{
 		perror("sendmsg");
@@ -150,6 +173,10 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	}
 }
 
+/*
+ * Funkcia prijime EIGRP paket cez soket (paSoket)
+ * a reaguje nan
+ */
 void receivePacket(int paSocket)
 {
 	char RecvPacket[10000];
