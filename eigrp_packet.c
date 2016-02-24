@@ -7,7 +7,7 @@
 
 #include "eigrp_packet.h"
 
-int Seq = 100;
+int Seq = EIGRP_START_SEQNUM;
 
 /*
  * Vypocita checksum EIGRP paketu z bloku dat (paStruct, paStructLen)

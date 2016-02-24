@@ -15,6 +15,7 @@
 #define EIGRP_VERSION			2
 #define EIGRP_MCAST				"224.0.0.10"
 #define EIGRP_ASN				1
+#define EIGRP_START_SEQNUM 		100
 
 /* EIGRP Timers*/
 #define HELLO_INTERVAL			100
