@@ -7,10 +7,7 @@
 
 #include "eigrp_packet.h"
 
-
-int jeSusedstvo = 0;
 int Seq = 100;
-int cakamNaAck = 0;
 
 /*
  * Vypocita checksum EIGRP paketu z bloku dat (paStruct, paStructLen)
@@ -208,6 +205,8 @@ void receivePacket(int paSocket)
 		struct in_addr src, dst;
 		src.s_addr = IP_Header->saddr;
 		dst.s_addr = IP_Header->daddr;
+
+		/* Debugovacie vypisy prichadzajucich paketov */
 //		char src_s[15];
 //		strcpy(&src_s, inet_ntoa(src));
 //		char dst_s[15];
@@ -225,66 +224,19 @@ void receivePacket(int paSocket)
 //				ntohl(RecvHdr->AckNum),
 //				ntohs(RecvHdr->ASN));
 
-		if(cakamNaAck != 0)
+
+		if(ntohl(RecvHdr->SeqNum) != 0  && opc != EIGRP_OPC_HELLO)
 		{
-			if(opc== EIGRP_OPC_HELLO && (ntohl(RecvHdr->AckNum) == cakamNaAck))
-			{
-				cakamNaAck = 0;
-				if(jeSusedstvo == 2)
-					jeSusedstvo = 1;
-
-				if(jeSusedstvo == 1)
-					jeSusedstvo = 0;
-				return;
-			}
-		}
-
-		if((opc==EIGRP_OPC_UPDATE) && (ntohl(RecvHdr->Flags) == 1))
-		{
-			if(jeSusedstvo == 0)
-			{
-				sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0);
-				NeiAddr = src;
-				jeSusedstvo = 3;
-			}
-
-			if(jeSusedstvo == 3)
-			{
-				sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, ntohl(RecvHdr->SeqNum), 0, 0, 0);
-				NeiAddr = src;
-				jeSusedstvo = 2;
-				cakamNaAck = Seq;
-				Seq++;
-			}
-			return;
-
-//			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
-//			Seq++;
-//			return;
-		}
-
-//		if((opc==1) && ((ntohl(RecvHdr->Flags) == 8) || (ntohl(RecvHdr->Flags) == 0)))
-//		{
-//			sendPacket(Socket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0);
-//			//sendPacket(Socket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum));
-//			jeSusedstvo = 1;
-//			Seq++;
-//			//return;
-//		}
-
-		if(jeSusedstvo == 1)
-		{
-			sendPacket(paSocket, SendAddr, EIGRP_OPC_UPDATE, 0, Seq, 0, 0, 0, 0);
-			cakamNaAck = Seq;
-			Seq++;
-			return;
-		}
-
-		if(ntohl(RecvHdr->SeqNum) != 0 )
-		{
-			//send ack packet
+			//posle ack packet
 			sendPacket(paSocket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0);
 		}
 
+		/* Reaguje na UPDATE paket s INIT flagom */
+		if((opc==EIGRP_OPC_UPDATE) && (ntohl(RecvHdr->Flags) == 1))
+		{
+			sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0);
+			NeiAddr = src;
+			Seq++;
+		}
 
 }
