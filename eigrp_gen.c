@@ -36,7 +36,7 @@ void helloThread(void *arg)
 
 	for(;;)
 	{
-		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0, 0);
+		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0, 0, 0);
 		sleep(HELLO_INTERVAL);
 	}
 }
@@ -50,7 +50,7 @@ void sendUserThread(void *arg)
 	struct in_addr SendAddr, MultiAddr;
 	unsigned char packetType;
 	unsigned int flags, seqNum, ackNum;
-	int hello, sendRoute, routeType, maxDelay;
+	int hello, sendRoute, routeType, maxDelay, goodbye;
 
 	if(inet_aton(EIGRP_MCAST, &MultiAddr) == 0)
 	{
@@ -68,6 +68,7 @@ void sendUserThread(void *arg)
 		sendRoute = 0;
 		routeType = 0;
 		maxDelay = 0;
+		goodbye = 0;
 
 		printf("Input packet address and packet type [m,u][h,q,r,u]:");
 		fgets(buffer, 10, stdin);
@@ -104,8 +105,14 @@ void sendUserThread(void *arg)
 		fgets(buffer, 10, stdin);
 		flags = atoi(buffer);
 
-		if(!hello)
+		if(hello)
 		{
+			memset(buffer, '\0', 10);
+			printf("Do you want to send Goodbye (y/n):");
+			fgets(buffer, 10, stdin);
+			if(buffer[0] == 'y')
+				goodbye = 1;
+		} else {
 			memset(buffer, '\0', 10);
 			printf("Input packet sequence number:");
 			fgets(buffer, 10, stdin);
@@ -142,7 +149,7 @@ void sendUserThread(void *arg)
 		printf("\n\n");
 
 		sendPacket(Socket, SendAddr, packetType, flags, seqNum,
-				ackNum, sendRoute, routeType, maxDelay);
+				ackNum, sendRoute, routeType, maxDelay, goodbye);
 	}
 }
 

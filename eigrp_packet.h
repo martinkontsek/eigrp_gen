@@ -42,10 +42,11 @@ unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int 
  * paSendRoute - 1 ak chceme poslat v pakete cestu, 0 ak nie
  * paRouteType - index predkonfigurovanej cesty, ktora sa ma poslat
  * paMaxDelay - 1 ak chceme v pakete MAX hodnotu delay, 0 standardna hodnota
+ * paGoodbye - 1 ak chceme aby boli v HELLO pakete vsetky K hodnoty 0xff(Goodbye)
  */
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
-		int paSendRoute, int paRouteType, int paMaxDelay);
+		int paSendRoute, int paRouteType, int paMaxDelay, int paGoodbye);
 
 /*
  * Funkcia prijime EIGRP paket cez soket (paSoket)

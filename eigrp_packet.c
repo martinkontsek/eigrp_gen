@@ -45,10 +45,11 @@ unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int 
  * paSendRoute - 1 ak chceme poslat v pakete cestu, 0 ak nie
  * paRouteType - index predkonfigurovanej cesty, ktora sa ma poslat
  * paMaxDelay - 1 ak chceme v pakete MAX hodnotu delay, 0 standardna hodnota
+ * paGoodbye - 1 ak chceme aby boli v HELLO pakete vsetky K hodnoty 0xff(Goodbye)
  */
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
-		int paSendRoute, int paRouteType, int paMaxDelay)
+		int paSendRoute, int paRouteType, int paMaxDelay, int paGoodbye)
 {
 	struct sockaddr_in SendAddr;
 	unsigned short checksum = 0;
@@ -92,8 +93,18 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		memset(&TLV_Param, 0, sizeof(TLV_Param));
 		TLV_Param.Type = htons(EIGRP_TLV_PARAM_TYPE);
 		TLV_Param.Length = htons(EIGRP_TLV_PARAM_LEN);
-		TLV_Param.K1 = 1;
-		TLV_Param.K3 = 1;
+		if(paGoodbye == 1)
+		{
+			TLV_Param.K1 = 0xff;
+			TLV_Param.K2 = 0xff;
+			TLV_Param.K3 = 0xff;
+			TLV_Param.K4 = 0xff;
+			TLV_Param.K5 = 0xff;
+			TLV_Param.K6 = 0xff;
+		} else {
+			TLV_Param.K1 = 1;
+			TLV_Param.K3 = 1;
+		}
 		TLV_Param.HoldTime = htons(EIGRP_TLV_PARAM_HOLD);
 		bufs[StructCount].iov_base = &TLV_Param;
 		bufs[StructCount].iov_len = sizeof(TLV_Param);
@@ -231,13 +242,13 @@ void receivePacket(int paSocket)
 		if(ntohl(RecvHdr->SeqNum) != 0  && opc != EIGRP_OPC_HELLO)
 		{
 			//posle ack packet
-			sendPacket(paSocket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0);
+			sendPacket(paSocket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0, 0);
 		}
 
 		/* Reaguje na UPDATE paket s INIT flagom */
 		if((opc==EIGRP_OPC_UPDATE) && (ntohl(RecvHdr->Flags) == 1))
 		{
-			sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0);
+			sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0, 0);
 			NeiAddr = src;
 			Seq++;
 		}
