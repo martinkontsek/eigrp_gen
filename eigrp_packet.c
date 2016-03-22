@@ -134,7 +134,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 			memset(&TLV_Termination, 0, sizeof(TLV_Termination));
 			TLV_Termination.Type = htons(EIGRP_TLV_TERM_TYPE);
 			TLV_Termination.Length = htons(EIGRP_TLV_TERM_LEN);
-			TLV_Termination.Unknown = htons(EIGRP_TLV_TERM_UNK);
+			TLV_Termination.Unknown = EIGRP_TLV_TERM_UNK;
 			TLV_Termination.NeighborIP = Neighbor_addr.s_addr;
 			bufs[StructCount].iov_base = &TLV_Termination;
 			bufs[StructCount].iov_len = EIGRP_TLV_TERM_LEN;
