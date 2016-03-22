@@ -60,7 +60,15 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	struct EIGRP_TLV_Param_t TLV_Param;
 	struct EIGRP_TLV_SW_Version_t TLV_Version;
 	struct EIGRP_TLV_Route_t TLV_Route;
+	struct EIGRP_TLV_Peer_Termination_t TLV_Termination;
 	struct msghdr MsgHead;
+	struct in_addr Neighbor_addr;
+
+	if(inet_aton(EIGRP_NEIGHBOR_ADDR, &Neighbor_addr) == 0)
+	{
+		fprintf(stderr, "inet_aton: Error converting address\n");
+		exit(EXIT_ERROR);
+	}
 
 	/* Priprava adresy */
 	memset(&SendAddr, 0, sizeof(SendAddr));
@@ -120,6 +128,19 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		bufs[StructCount].iov_len = sizeof(TLV_Version);
 		checksum = calcChecksum(checksum, &TLV_Version, sizeof(TLV_Version));
 		StructCount++;
+
+		if(paGoodbye == 2)
+		{
+			memset(&TLV_Termination, 0, sizeof(TLV_Termination));
+			TLV_Termination.Type = htons(EIGRP_TLV_TERM_TYPE);
+			TLV_Termination.Length = htons(EIGRP_TLV_TERM_LEN);
+			TLV_Termination.Unknown = htons(EIGRP_TLV_TERM_UNK);
+			TLV_Termination.NeighborIP = Neighbor_addr.s_addr;
+			bufs[StructCount].iov_base = &TLV_Termination;
+			bufs[StructCount].iov_len = EIGRP_TLV_TERM_LEN;
+			checksum = calcChecksum(checksum, &TLV_Termination, sizeof(TLV_Termination));
+			StructCount++;
+		}
 	}
 
 	if(paSendRoute == 1)

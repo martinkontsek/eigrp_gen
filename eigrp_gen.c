@@ -108,10 +108,9 @@ void sendUserThread(void *arg)
 		if(hello)
 		{
 			memset(buffer, '\0', 10);
-			printf("Do you want to send Goodbye (y/n):");
+			printf("Do you want to send Goodbye? no(0),all(1),one(2):");
 			fgets(buffer, 10, stdin);
-			if(buffer[0] == 'y')
-				goodbye = 1;
+			goodbye = atoi(buffer);
 		} else {
 			memset(buffer, '\0', 10);
 			printf("Input packet sequence number:");

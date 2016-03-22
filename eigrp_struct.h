@@ -60,5 +60,14 @@ struct EIGRP_TLV_Route_t
 	unsigned char Dest3;
 } __attribute__((packed));
 
+struct EIGRP_TLV_Peer_Termination_t
+{
+	unsigned short Type;
+	unsigned short Length;
+	unsigned char  Unknown;
+	unsigned int   NeighborIP;
+	unsigned char  Padding;
+} __attribute__((packed));
+
 
 #endif /* EIGRP_STRUCT_H_ */

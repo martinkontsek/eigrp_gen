@@ -14,6 +14,7 @@
 #define PROTO_EIGRP 			88
 #define EIGRP_VERSION			2
 #define EIGRP_MCAST				"224.0.0.10"
+#define EIGRP_NEIGHBOR_ADDR		"192.0.2.2"
 #define EIGRP_ASN				1
 #define EIGRP_START_SEQNUM 		100
 
@@ -51,6 +52,11 @@
 
 /* EIGRP TLV Route Flags */
 #define EIGRP_ROUTE_FLAG_ACTIVE	0x04
+
+/* EIGRP TLV Peer Termination */
+#define EIGRP_TLV_TERM_TYPE		0x0007
+#define EIGRP_TLV_TERM_LEN		9
+#define EIGRP_TLV_TERM_UNK		0x04
 
 #define EXIT_ERROR 				1
 
