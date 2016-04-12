@@ -23,9 +23,9 @@
 /*
  * Vo vlakne posiela HELLO pakety
  */
-void helloThread(void *arg)
+void * helloThread(void *arg)
 {
-	int Socket = arg;
+	int Socket = *((int *)arg);
 	struct in_addr SendAddr;
 	if(inet_aton(EIGRP_MCAST, &SendAddr) == 0)
 	{
@@ -39,14 +39,16 @@ void helloThread(void *arg)
 		sendPacket(Socket, SendAddr, EIGRP_OPC_HELLO, 0, 0, 0, 0, 0, 0, 0);
 		sleep(HELLO_INTERVAL);
 	}
+
+	return 0;
 }
 
 /*
  * Posielanie pouzivatelom zadanych paketov
  */
-void sendUserThread(void *arg)
+void * sendUserThread(void *arg)
 {
-	int Socket = arg;
+	int Socket = *((int *)arg);
 	struct in_addr SendAddr, MultiAddr;
 	unsigned char packetType;
 	unsigned int flags, seqNum, ackNum;
@@ -150,6 +152,8 @@ void sendUserThread(void *arg)
 		sendPacket(Socket, SendAddr, packetType, flags, seqNum,
 				ackNum, sendRoute, routeType, maxDelay, goodbye);
 	}
+
+	return 0;
 }
 
 int main(void)
@@ -202,7 +206,7 @@ int main(void)
 
 	/* Vlakno na posielanie paketov uzivatelom */
 	pthread_t SendFromUserThread;
-	pthread_create(&SendFromUserThread, NULL, sendUserThread, (void *) Socket);
+	pthread_create(&SendFromUserThread, NULL, sendUserThread, (void *) &Socket);
 
 	/* prijima pakety a reaguje na ne */
 	for(;;)
