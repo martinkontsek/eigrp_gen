@@ -1,5 +1,5 @@
 /*
- * rigrp_gen.c
+ * eigrp_gen.c
  *
  *  Created on: Oct 21, 2015
  *      Author: Martin Kontsek
@@ -21,7 +21,7 @@
 #include "eigrp_const.h"
 
 /*
- * Vo vlakne posiela HELLO pakety
+ * Sending HELLO packets in separate thread
  */
 void * helloThread(void *arg)
 {
@@ -44,7 +44,7 @@ void * helloThread(void *arg)
 }
 
 /*
- * Posielanie pouzivatelom zadanych paketov
+ * Send packets specified by user
  */
 void * sendUserThread(void *arg)
 {
@@ -175,7 +175,7 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	/* Posielanie paketov cez pozadovane rozhranie */
+	/* Sending packets via specified interface (IF_NAME) */
 	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
 	{
 		perror("setsockopt_sol");
@@ -183,7 +183,7 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	/* clenstvo v multicast skupine */
+	/* join the multicast group */
 	if(inet_aton(EIGRP_MCAST, &MultiJoin.imr_multiaddr) == 0)
 	{
 		fprintf(stderr, "inet_aton: Invalid multicast address\n");
@@ -200,15 +200,15 @@ int main(void)
 		exit(EXIT_ERROR);
 	}
 
-	/* Vlakno na periodicke posielanie HELLO paketov */
-//	pthread_t SendHelloThread;
-//	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
+	/* Create thread for sending periodical HELLO packets */
+	pthread_t SendHelloThread;
+	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
 
-	/* Vlakno na posielanie paketov uzivatelom */
+	/* Create thread for sending packets requested by user */
 	pthread_t SendFromUserThread;
 	pthread_create(&SendFromUserThread, NULL, sendUserThread, (void *) &Socket);
 
-	/* prijima pakety a reaguje na ne */
+	/* receiving and responding to packets */
 	for(;;)
 	{
 		receivePacket(Socket);

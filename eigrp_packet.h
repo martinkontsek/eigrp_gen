@@ -25,32 +25,32 @@
 struct in_addr NeiAddr;
 
 /*
- * Vypocita checksum EIGRP paketu z bloku dat (paStruct, paStructLen)
- * a pripocita aj checksum predchadzajuceho bloku dat (paStartChecksum)
+ * Compute checksum of EIGRP packet from block of data specified by (paStruct, paStructLen)
+ * and adds also checksum of previous block of data (paStartChecksum)
  */
 unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int paStructLen);
 
 /*
- * Posle EIGRP paket
+ * Send EIGRP packet
  *
- * paSocket - socket, cez ktory sa paket posle
- * paAddress - adresa, na ktoru sa paket odosle
- * paPacketType - typ EIGRP paketu (Hello, Update...)
- * paFlags - ake flagy ma paket obsahovat
- * paSeq - sekvencne cislo paketu, ak -1, tak si program cisluje sam
- * paAck - sekvencne cislo, ktore chceme potvrdit
- * paSendRoute - 1 ak chceme poslat v pakete cestu, 0 ak nie
- * paRouteType - index predkonfigurovanej cesty, ktora sa ma poslat
- * paMaxDelay - 1 ak chceme v pakete MAX hodnotu delay, 0 standardna hodnota
- * paGoodbye - 1 ak chceme aby boli v HELLO pakete vsetky K hodnoty 0xff(Goodbye)
+ * paSocket - socket for sending packet
+ * paAddress - destination address
+ * paPacketType - type of EIGRP packet (Hello, Update...)
+ * paFlags - flags inside of EIGRP packet
+ * paSeq - sequence number of packet, if -1 is specified, application will do autoincrement
+ * paAck - acknowledge number
+ * paSendRoute - 1 if you want add IPv4 route TLV into packet, 0 without route
+ * paRouteType - choose which preconfigured IPv4 route use, effective only if paSendRoute is set to 1
+ * paMaxDelay - 1 will send packet with MAX delay value, 0 standard delay value
+ * paGoodbye - 1 all the K values inside of HELLO packet will be set to 0xff (Goodbye)
  */
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
 		int paSendRoute, int paRouteType, int paMaxDelay, int paGoodbye);
 
 /*
- * Funkcia prijime EIGRP paket cez soket (paSoket)
- * a reaguje nan
+ * Receive EIGRP packet cez socket (paSoket)
+ * and respond to received packet
  */
 void receivePacket(int paSocket);
 

@@ -10,8 +10,8 @@
 int Seq = EIGRP_START_SEQNUM;
 
 /*
- * Vypocita checksum EIGRP paketu z bloku dat (paStruct, paStructLen)
- * a pripocita aj checksum predchadzajuceho bloku dat (paStartChecksum)
+ * Compute checksum of EIGRP packet from block of data specified by (paStruct, paStructLen)
+ * and adds also checksum of previous block of data (paStartChecksum)
  */
 unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int paStructLen)
 {
@@ -20,8 +20,8 @@ unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int 
 	unsigned short *smernik;
 
 	/*
-	 * Blok dat prechadza po dvoch bajtoch,
-	 * scitava ich, kontroluje, ci nastalo pretecenie
+	 * Get 2 bytes of data, add the value to previous result,
+	 * and check, if the variable has overflown
 	 */
 	smernik = (unsigned short *)paStruct;
 	for(i=0; i<paStructLen/2; i++)
@@ -34,18 +34,18 @@ unsigned short calcChecksum(unsigned short paStartChecksum, void *paStruct, int 
 }
 
 /*
- * Posle EIGRP paket
+ * Send EIGRP packet
  *
- * paSocket - socket, cez ktory sa paket posle
- * paAddress - adresa, na ktoru sa paket odosle
- * paPacketType - typ EIGRP paketu (Hello, Update...)
- * paFlags - ake flagy ma paket obsahovat
- * paSeq - sekvencne cislo paketu, ak -1, tak si program cisluje sam
- * paAck - sekvencne cislo, ktore chceme potvrdit
- * paSendRoute - 1 ak chceme poslat v pakete cestu, 0 ak nie
- * paRouteType - index predkonfigurovanej cesty, ktora sa ma poslat
- * paMaxDelay - 1 ak chceme v pakete MAX hodnotu delay, 0 standardna hodnota
- * paGoodbye - 1 ak chceme aby boli v HELLO pakete vsetky K hodnoty 0xff(Goodbye)
+ * paSocket - socket for sending packet
+ * paAddress - destination address
+ * paPacketType - type of EIGRP packet (Hello, Update...)
+ * paFlags - flags inside of EIGRP packet
+ * paSeq - sequence number of packet, if -1 is specified, application will do autoincrement
+ * paAck - acknowledge number
+ * paSendRoute - 1 if you want add IPv4 route TLV into packet, 0 without route
+ * paRouteType - choose which preconfigured IPv4 route use, effective only if paSendRoute is set to 1
+ * paMaxDelay - 1 will send packet with MAX delay value, 0 standard delay value
+ * paGoodbye - 1 all the K values inside of HELLO packet will be set to 0xff (Goodbye)
  */
 void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketType,
 		unsigned int paFlags, unsigned int paSeq, unsigned int paAck,
@@ -70,17 +70,17 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		exit(EXIT_ERROR);
 	}
 
-	/* Priprava adresy */
+	/* Prepare destination address */
 	memset(&SendAddr, 0, sizeof(SendAddr));
 	SendAddr.sin_family = AF_INET;
 	SendAddr.sin_addr = paAddress;
 
-	/* Hlavicka EIGRP paketu */
+	/* Header of EIGRP packet */
 	memset(&Header, 0, sizeof(Header));
 	Header.Version = EIGRP_VERSION;
 	Header.Opcode = paPacketType;
 	Header.Flags = htonl(paFlags);
-	/* ak je paSeq -1, pouzijeme hodnotu z vnutorneho pocitadla */
+	/* if paSeq -1, increment previously used sequence number value  */
 	if(paSeq == -1)
 	{
 		Header.SeqNum = htonl(Seq);
@@ -95,7 +95,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 	checksum = calcChecksum(checksum, &Header, sizeof(Header));
 	StructCount++;
 
-	/* TLV pre HELLO paket */
+	/* TLV inside HELLO packet */
 	if(paPacketType == EIGRP_OPC_HELLO)
 	{
 		memset(&TLV_Param, 0, sizeof(TLV_Param));
@@ -149,7 +149,7 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		TLV_Route.Type = htons(EIGRP_TLV_ROUTE_TYPE);
 		TLV_Route.Length = htons(EIGRP_TLV_ROUTE_LEN);
 		TLV_Route.NextHop = htonl(EIGRP_TLV_ROUTE_NHOP);
-		/* V QUERY pakete sa posle MAX delay a flag aktivnej cesty */
+		/* QUERY packet will have MAX delay and active route flag */
 		if(paPacketType == EIGRP_OPC_QUERY)
 		{
 			TLV_Route.Delay = htonl(EIGRP_MAX_DELAY);
@@ -161,11 +161,11 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 			TLV_Route.Reliability = EIGRP_TLV_ROUTE_RELIAB;
 			TLV_Route.Load = EIGRP_TLV_ROUTE_LOAD;
 		}
-		/* Ak je paMaxDelay 1, nastavime MAX delay */
+		/* if paMaxDelay is 1, set MAX delay */
 		if(paMaxDelay == 1)
 			TLV_Route.Delay = htonl(EIGRP_MAX_DELAY);
 		TLV_Route.PrefixLen = 24;
-		/* Zapiseme pozadovanu cestu do paketu */
+		/* put route inside packet */
 		if(paRouteType == 0)
 		{
 			TLV_Route.Dest1 = 10;
@@ -183,17 +183,17 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 		StructCount++;
 	}
 
-	/* Do hlavicky paketu zapiseme bitovy doplnok vypocitanej checksum */
+	/* Save bitwise complement of computed checksum into header */
 	Header.Checksum = ~checksum;
 
-	/* Pripravime Scatter-Gatter strukturu */
+	/* Prepare Scatter-Gatter struct */
 	memset(&MsgHead, 0, sizeof(MsgHead));
 	MsgHead.msg_name = &SendAddr;
 	MsgHead.msg_namelen = sizeof(SendAddr);
 	MsgHead.msg_iov = (void *)bufs;
 	MsgHead.msg_iovlen = StructCount;
 
-	/* Paket odosleme */
+	/* Send packet */
 	if(sendmsg(paSocket, &MsgHead, 0) == -1)
 	{
 		perror("sendmsg");
@@ -203,8 +203,8 @@ void sendPacket(int paSocket, struct in_addr paAddress, unsigned char paPacketTy
 }
 
 /*
- * Funkcia prijime EIGRP paket cez soket (paSoket)
- * a reaguje nan
+ * Receive EIGRP packet cez socket (paSoket)
+ * and respond to received packet
  */
 void receivePacket(int paSocket)
 {
@@ -238,7 +238,7 @@ void receivePacket(int paSocket)
 		src.s_addr = IP_Header->saddr;
 		dst.s_addr = IP_Header->daddr;
 
-		/* Debugovacie vypisy prichadzajucich paketov */
+		/* Print info about reveived packets */
 //		char src_s[15];
 //		strcpy(&src_s, inet_ntoa(src));
 //		char dst_s[15];
@@ -262,11 +262,11 @@ void receivePacket(int paSocket)
 
 		if(ntohl(RecvHdr->SeqNum) != 0  && opc != EIGRP_OPC_HELLO)
 		{
-			//posle ack packet
+			//send ACK packet
 			sendPacket(paSocket, src, EIGRP_OPC_HELLO, 0, 0, ntohl(RecvHdr->SeqNum), 0, 0, 0, 0);
 		}
 
-		/* Reaguje na UPDATE paket s INIT flagom */
+		/* Respond to UPDATE packet with INIT flag */
 		if((opc==EIGRP_OPC_UPDATE) && (ntohl(RecvHdr->Flags) == 1))
 		{
 			sendPacket(paSocket, src, EIGRP_OPC_UPDATE, 1, Seq, 0, 0, 0, 0, 0);
