@@ -176,7 +176,7 @@ int main(void)
 	}
 
 	/* Sending packets via specified interface (IF_NAME) */
-	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, 5) == -1)
+	if(setsockopt(Socket, SOL_SOCKET, SO_BINDTODEVICE, IF_NAME, strlen(IF_NAME)) == -1)
 	{
 		perror("setsockopt_sol");
 		close(Socket);
@@ -202,7 +202,7 @@ int main(void)
 
 	/* Create thread for sending periodical HELLO packets */
 	pthread_t SendHelloThread;
-	pthread_create(&SendHelloThread, NULL, helloThread, (void *) Socket);
+	pthread_create(&SendHelloThread, NULL, helloThread, (void *) &Socket);
 
 	/* Create thread for sending packets requested by user */
 	pthread_t SendFromUserThread;
